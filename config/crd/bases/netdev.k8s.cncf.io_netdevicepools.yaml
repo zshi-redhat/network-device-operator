@@ -53,10 +53,36 @@ spec:
                     type: array
                 type: object
               netDevice:
-                description: Name of the NetDevice configuration
-                items:
-                  type: string
-                type: array
+                description: NetDevice configuration
+                properties:
+                  deviceFeature:
+                    description: Device feature configuration (e.g. ethtool -K)
+                    properties:
+                      features:
+                        additionalProperties:
+                          type: string
+                        description: Device features (tx-checksumming:on, rx-checksumming:off
+                          etc)
+                        type: object
+                    type: object
+                  deviceType:
+                    description: Device Driver model configuration
+                    properties:
+                      driver:
+                        description: Driver bind configuration (vfio-pci, kernel drivers
+                          )
+                        type: string
+                      driverModel:
+                        description: Driver model configuration (switchdev, legacy)
+                        type: string
+                      driverProfile:
+                        description: Driver profile configuration (DDP)
+                        type: string
+                      linkType:
+                        description: Link model configuration (Ethernet, InfiniBand)
+                        type: string
+                    type: object
+                type: object
               nodeSelector:
                 additionalProperties:
                   type: string

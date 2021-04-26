@@ -69,8 +69,9 @@ func (dn *Daemon) processWorkItem() bool {
 
 	err := func(obj interface{}) error {
 		var key int64
+		var ok bool
 		defer dn.workqueue.Done(obj)
-		if key, ok := obj.(int64); !ok {
+		if key, ok = obj.(int64); !ok {
 			dn.workqueue.Forget(obj)
 			utilruntime.HandleError(fmt.Errorf("expected workItem in workqueue but got %#v", obj))
 			return nil
@@ -94,6 +95,7 @@ func (dn *Daemon) processWorkItem() bool {
 	return true
 }
 
-func (dn *Daemon) syncHandler(key) {
+func (dn *Daemon) syncHandler(key int64) error {
 	glog.V(2).Infof("syncHandler() start")
+	return nil
 }
