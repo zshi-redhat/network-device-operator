@@ -23,6 +23,7 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+// +k8s:openapi-gen=true
 // NetDevicePoolSpec defines the desired state of NetDevicePool
 type NetDevicePoolSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -71,15 +72,19 @@ type DeviceFeature struct {
 	Features map[string]string `json:"features,omitempty"`
 }
 
+// +k8s:openapi-gen=true
 // NetDevicePoolStatus defines the observed state of NetDevicePool
 type NetDevicePoolStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-
+// +genclient
+// +kubebuilder:object:root=true
+// +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=netdevicepools,scope=Namespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // NetDevicePool is the Schema for the netdevicepools API
 type NetDevicePool struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -89,8 +94,10 @@ type NetDevicePool struct {
 	Status NetDevicePoolStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-
+// +genclient
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 // NetDevicePoolList contains a list of NetDevicePool
 type NetDevicePoolList struct {
 	metav1.TypeMeta `json:",inline"`
