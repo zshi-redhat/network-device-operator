@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"os"
 	"time"
 )
 
@@ -13,3 +14,5 @@ const (
 	// in the face of errors.
 	maxUpdateBackoff = 60 * time.Second
 )
+
+var namespace = os.Getenv("NAMESPACE")

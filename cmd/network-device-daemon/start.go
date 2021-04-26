@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	ndclientset "github.com/zshi-redhat/network-device-operator/pkg/client/clientset/versioned"
 	"github.com/zshi-redhat/network-device-operator/pkg/daemon"
 	"github.com/zshi-redhat/network-device-operator/pkg/utils"
 	"k8s.io/client-go/kubernetes"
@@ -86,12 +87,14 @@ func runStartCmd(cmd *cobra.Command, args []string) {
 	}
 
 	kubeclient := kubernetes.NewForConfigOrDie(config)
+	ndclient := ndclientset.NewForConfigOrDie(config)
 
 	glog.V(0).Info("starting NetworkDeviceDaemon")
 	err = daemon.New(
 		startOpts.nodeName,
 		stopCh,
 		kubeclient,
+		ndclient,
 	).Run()
 	if err != nil {
 		glog.Errorf("Failed to run daemon: %v", err)

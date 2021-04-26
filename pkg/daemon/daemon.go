@@ -2,14 +2,24 @@ package daemon
 
 import (
 	"fmt"
+	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/golang/glog"
+	ndv1alpha1 "github.com/zshi-redhat/network-device-operator/api/v1alpha1"
+	ndclientset "github.com/zshi-redhat/network-device-operator/pkg/client/clientset/versioned"
+	ndinformer "github.com/zshi-redhat/network-device-operator/pkg/client/informers/externalversions"
+	ndlister "github.com/zshi-redhat/network-device-operator/pkg/client/listers/netdev/v1alpha1"
+	"github.com/zshi-redhat/network-device-operator/pkg/utils"
 	"golang.org/x/time/rate"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -17,18 +27,22 @@ type Daemon struct {
 	name      string
 	stopCh    <-chan struct{}
 	k8sClient *kubernetes.Clientset
+	ndClient  ndclientset.Interface
 	workqueue workqueue.RateLimitingInterface
+	ndpLister ndlister.NetDevicePoolLister
 }
 
 func New(
 	name string,
 	stopCh <-chan struct{},
 	k8sClient *kubernetes.Clientset,
+	ndClient ndclientset.Interface,
 ) *Daemon {
 	return &Daemon{
 		name:      name,
 		stopCh:    stopCh,
 		k8sClient: k8sClient,
+		ndClient:  ndClient,
 		workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.NewMaxOfRateLimiter(
 			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(updateDelay), 1)},
 			workqueue.NewItemExponentialFailureRateLimiter(1*time.Second, maxUpdateBackoff)), "NetDevicePool"),
@@ -39,6 +53,23 @@ func (dn *Daemon) Run() error {
 	glog.V(2).Info("Run() start")
 
 	// netdevicepool informer
+	var timeout int64 = 5
+	ndInformerFactory := ndinformer.NewFilteredSharedInformerFactory(dn.ndClient,
+		time.Second*15,
+		namespace,
+		func(lo *metav1.ListOptions) {
+			lo.TimeoutSeconds = &timeout
+		},
+	)
+	ndpInformer := ndInformerFactory.Netdev().V1alpha1().NetDevicePools().Informer()
+	ndpInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: dn.enqueueNetDevicePoolUpdate,
+		UpdateFunc: func(old, new interface{}) {
+			dn.enqueueNetDevicePoolUpdate(new)
+		},
+	})
+
+	dn.ndpLister = ndInformerFactory.Netdev().V1alpha1().NetDevicePools().Lister()
 
 	// worker queue process
 	go wait.Until(dn.worker, time.Second, dn.stopCh)
@@ -50,6 +81,23 @@ func (dn *Daemon) Run() error {
 			return nil
 		}
 	}
+}
+
+func (dn *Daemon) enqueueNetDevicePoolUpdate(obj interface{}) {
+	var ok bool
+	var key string
+	var ndp *ndv1alpha1.NetDevicePool
+
+	if ndp, ok = obj.(*ndv1alpha1.NetDevicePool); !ok {
+		utilruntime.HandleError(fmt.Errorf("expected NetDevicePool but got %#v", obj))
+		return
+	}
+	if (len(ndp.GetNamespace())) > 0 {
+		key = ndp.GetNamespace() + "/" + ndp.GetName() + "/" + strconv.FormatInt(ndp.GetGeneration(), 10)
+	} else {
+		key = ndp.GetName() + "/" + strconv.FormatInt(ndp.GetGeneration(), 10)
+	}
+	dn.workqueue.Add(key)
 }
 
 func (dn *Daemon) worker() {
@@ -68,10 +116,10 @@ func (dn *Daemon) processWorkItem() bool {
 	}
 
 	err := func(obj interface{}) error {
-		var key int64
+		var key string
 		var ok bool
 		defer dn.workqueue.Done(obj)
-		if key, ok = obj.(int64); !ok {
+		if key, ok = obj.(string); !ok {
 			dn.workqueue.Forget(obj)
 			utilruntime.HandleError(fmt.Errorf("expected workItem in workqueue but got %#v", obj))
 			return nil
@@ -85,7 +133,7 @@ func (dn *Daemon) processWorkItem() bool {
 		}
 
 		dn.workqueue.Forget(obj)
-		glog.V(2).Infof("processWorkItem() successfully processed: %d", key)
+		glog.V(2).Infof("processWorkItem() successfully processed: %s", key)
 		return nil
 	}(obj)
 	if err != nil {
@@ -95,7 +143,50 @@ func (dn *Daemon) processWorkItem() bool {
 	return true
 }
 
-func (dn *Daemon) syncHandler(key int64) error {
+func (dn *Daemon) syncHandler(key string) error {
 	glog.V(2).Infof("syncHandler() start")
+	_, err := dn.ndpLister.List(labels.Everything())
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func configDevice() {
+	glog.V(2).Infof("runSystemd(): start")
+	exit, err := utils.Chroot("/host")
+	if err != nil {
+		glog.Errorf("rebootNode(): %v", err)
+	}
+	defer exit()
+
+	cmd := exec.Command("systemd-run", "--unit", "network-device-daemon-config",
+		"--description", fmt.Sprintf("network-device-daemon config device"), "/bin/sh", "-c", "systemctl start network-device-configuration.service")
+
+	if err := cmd.Run(); err != nil {
+		glog.Errorf("failed to config device: %v", err)
+	}
+}
+
+func rebootNode() {
+	glog.V(2).Infof("rebootNode(): start")
+	exit, err := utils.Chroot("/host")
+	if err != nil {
+		glog.Errorf("rebootNode(): %v", err)
+	}
+	defer exit()
+	// creates a new transient systemd unit to reboot the system.
+	// We explictily try to stop kubelet.service first, before anything else; this
+	// way we ensure the rest of system stays running, because kubelet may need
+	// to do "graceful" shutdown by e.g. de-registering with a load balancer.
+	// However note we use `;` instead of `&&` so we keep rebooting even
+	// if kubelet failed to shutdown - that way the machine will still eventually reboot
+	// as systemd will time out the stop invocation.
+	cmd := exec.Command("systemd-run", "--unit", "network-device-daemon-reboot",
+		"--description", fmt.Sprintf("network-device-daemon reboot node"), "/bin/sh", "-c", "systemctl stop kubelet.service; reboot")
+
+	if err := cmd.Run(); err != nil {
+		glog.Errorf("failed to reboot node: %v", err)
+	}
 }
