@@ -1,0 +1,24 @@
+# permissions for end users to edit netdevicepools.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: netdevicepool-editor-role
+rules:
+- apiGroups:
+  - netdev.k8s.cncf.io
+  resources:
+  - netdevicepools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - netdev.k8s.cncf.io
+  resources:
+  - netdevicepools/status
+  verbs:
+  - get

@@ -1,0 +1,7 @@
+apiVersion: netdev.k8s.cncf.io/v1alpha1
+kind: NetDevicePool
+metadata:
+  name: netdevicepool-sample
+spec:
+  # Add fields here
+  foo: bar

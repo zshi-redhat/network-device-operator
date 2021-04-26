@@ -1,0 +1,20 @@
+# permissions for end users to view netdevices.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: netdevice-viewer-role
+rules:
+- apiGroups:
+  - netdev.k8s.cncf.io
+  resources:
+  - netdevices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - netdev.k8s.cncf.io
+  resources:
+  - netdevices/status
+  verbs:
+  - get

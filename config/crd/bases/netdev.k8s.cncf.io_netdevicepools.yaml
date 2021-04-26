@@ -1,0 +1,82 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: netdevicepools.netdev.k8s.cncf.io
+spec:
+  group: netdev.k8s.cncf.io
+  names:
+    kind: NetDevicePool
+    listKind: NetDevicePoolList
+    plural: netdevicepools
+    singular: netdevicepool
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: NetDevicePool is the Schema for the netdevicepools API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NetDevicePoolSpec defines the desired state of NetDevicePool
+            properties:
+              deviceSelector:
+                description: Select devices on nodes
+                properties:
+                  devices:
+                    items:
+                      type: string
+                    type: array
+                  pciAddrs:
+                    items:
+                      type: string
+                    type: array
+                  vendors:
+                    items:
+                      type: string
+                    type: array
+                type: object
+              netDevice:
+                description: Name of the NetDevice configuration
+                items:
+                  type: string
+                type: array
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: Select the nodes
+                type: object
+              resourceName:
+                description: K8s extended resource name
+                type: string
+            type: object
+          status:
+            description: NetDevicePoolStatus defines the observed state of NetDevicePool
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -1,0 +1,7 @@
+apiVersion: netdev.k8s.cncf.io/v1alpha1
+kind: NetDevice
+metadata:
+  name: netdevice-sample
+spec:
+  # Add fields here
+  foo: bar
