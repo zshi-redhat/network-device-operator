@@ -54,8 +54,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=netdev, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("netdevicepools"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Netdev().V1alpha1().NetDevicePools().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("netdevicepoollists"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Netdev().V1alpha1().NetDevicePoolLists().Informer()}, nil
 
 	}
 

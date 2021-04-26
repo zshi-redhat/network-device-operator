@@ -24,11 +24,3 @@ type NetDevicePoolListerExpansion interface{}
 // NetDevicePoolNamespaceListerExpansion allows custom methods to be added to
 // NetDevicePoolNamespaceLister.
 type NetDevicePoolNamespaceListerExpansion interface{}
-
-// NetDevicePoolListListerExpansion allows custom methods to be added to
-// NetDevicePoolListLister.
-type NetDevicePoolListListerExpansion interface{}
-
-// NetDevicePoolListNamespaceListerExpansion allows custom methods to be added to
-// NetDevicePoolListNamespaceLister.
-type NetDevicePoolListNamespaceListerExpansion interface{}

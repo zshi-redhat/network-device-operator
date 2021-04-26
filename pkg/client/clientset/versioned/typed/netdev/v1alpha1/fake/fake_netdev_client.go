@@ -31,10 +31,6 @@ func (c *FakeNetdevV1alpha1) NetDevicePools(namespace string) v1alpha1.NetDevice
 	return &FakeNetDevicePools{c, namespace}
 }
 
-func (c *FakeNetdevV1alpha1) NetDevicePoolLists(namespace string) v1alpha1.NetDevicePoolListInterface {
-	return &FakeNetDevicePoolLists{c, namespace}
-}
-
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeNetdevV1alpha1) RESTClient() rest.Interface {

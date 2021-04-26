@@ -94,9 +94,6 @@ type NetDevicePool struct {
 	Status NetDevicePoolStatus `json:"status,omitempty"`
 }
 
-// +genclient
-// +k8s:openapi-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // NetDevicePoolList contains a list of NetDevicePool
 type NetDevicePoolList struct {

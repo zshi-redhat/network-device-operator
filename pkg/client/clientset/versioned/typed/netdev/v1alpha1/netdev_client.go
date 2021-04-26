@@ -26,7 +26,6 @@ import (
 type NetdevV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	NetDevicePoolsGetter
-	NetDevicePoolListsGetter
 }
 
 // NetdevV1alpha1Client is used to interact with features provided by the netdev group.
@@ -36,10 +35,6 @@ type NetdevV1alpha1Client struct {
 
 func (c *NetdevV1alpha1Client) NetDevicePools(namespace string) NetDevicePoolInterface {
 	return newNetDevicePools(c, namespace)
-}
-
-func (c *NetdevV1alpha1Client) NetDevicePoolLists(namespace string) NetDevicePoolListInterface {
-	return newNetDevicePoolLists(c, namespace)
 }
 
 // NewForConfig creates a new NetdevV1alpha1Client for the given config.

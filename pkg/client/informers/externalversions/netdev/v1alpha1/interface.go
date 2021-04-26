@@ -25,8 +25,6 @@ import (
 type Interface interface {
 	// NetDevicePools returns a NetDevicePoolInformer.
 	NetDevicePools() NetDevicePoolInformer
-	// NetDevicePoolLists returns a NetDevicePoolListInformer.
-	NetDevicePoolLists() NetDevicePoolListInformer
 }
 
 type version struct {
@@ -43,9 +41,4 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // NetDevicePools returns a NetDevicePoolInformer.
 func (v *version) NetDevicePools() NetDevicePoolInformer {
 	return &netDevicePoolInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// NetDevicePoolLists returns a NetDevicePoolListInformer.
-func (v *version) NetDevicePoolLists() NetDevicePoolListInformer {
-	return &netDevicePoolListInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

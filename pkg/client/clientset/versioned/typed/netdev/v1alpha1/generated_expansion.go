@@ -18,5 +18,3 @@ limitations under the License.
 package v1alpha1
 
 type NetDevicePoolExpansion interface{}
-
-type NetDevicePoolListExpansion interface{}
