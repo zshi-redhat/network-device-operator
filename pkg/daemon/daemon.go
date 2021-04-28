@@ -3,7 +3,7 @@ package daemon
 import (
 	"fmt"
 	"os/exec"
-	"strconv"
+	// "strconv"
 	"time"
 
 	"github.com/golang/glog"
@@ -85,19 +85,18 @@ func (dn *Daemon) Run() error {
 
 func (dn *Daemon) enqueueNetDevicePoolUpdate(obj interface{}) {
 	var ok bool
-	var key string
-	var ndp *ndv1alpha1.NetDevicePool
-
-	if ndp, ok = obj.(*ndv1alpha1.NetDevicePool); !ok {
+	if _, ok = obj.(*ndv1alpha1.NetDevicePool); !ok {
 		utilruntime.HandleError(fmt.Errorf("expected NetDevicePool but got %#v", obj))
 		return
 	}
-	if (len(ndp.GetNamespace())) > 0 {
-		key = ndp.GetNamespace() + "/" + ndp.GetName() + "/" + strconv.FormatInt(ndp.GetGeneration(), 10)
-	} else {
-		key = ndp.GetName() + "/" + strconv.FormatInt(ndp.GetGeneration(), 10)
-	}
-	dn.workqueue.Add(key)
+
+	// var key string
+	// if (len(ndp.GetNamespace())) > 0 {
+	// 	key = ndp.GetNamespace() + "/" + ndp.GetName() + "/" + strconv.FormatInt(ndp.GetGeneration(), 10)
+	// } else {
+	//	key = ndp.GetName() + "/" + strconv.FormatInt(ndp.GetGeneration(), 10)
+	// }
+	dn.workqueue.Add(obj)
 }
 
 func (dn *Daemon) worker() {
@@ -116,24 +115,25 @@ func (dn *Daemon) processWorkItem() bool {
 	}
 
 	err := func(obj interface{}) error {
-		var key string
-		var ok bool
 		defer dn.workqueue.Done(obj)
-		if key, ok = obj.(string); !ok {
+
+		var ok bool
+		var ndp *ndv1alpha1.NetDevicePool
+		if ndp, ok = obj.(*ndv1alpha1.NetDevicePool); !ok {
 			dn.workqueue.Forget(obj)
 			utilruntime.HandleError(fmt.Errorf("expected workItem in workqueue but got %#v", obj))
 			return nil
 		}
 
 		// process workqueue item
-		err := dn.syncHandler(key)
+		err := dn.syncHandler(ndp)
 		if err != nil {
-			dn.workqueue.AddRateLimited(key)
+			dn.workqueue.AddRateLimited(obj)
 			return fmt.Errorf("Failed to run device sync handler, %v, requeued", err.Error())
 		}
 
 		dn.workqueue.Forget(obj)
-		glog.V(2).Infof("processWorkItem() successfully processed: %s", key)
+		glog.V(2).Infof("processWorkItem() successfully processed: %v", ndp)
 		return nil
 	}(obj)
 	if err != nil {
@@ -143,30 +143,40 @@ func (dn *Daemon) processWorkItem() bool {
 	return true
 }
 
-func (dn *Daemon) syncHandler(key string) error {
+func (dn *Daemon) syncHandler(ndp *ndv1alpha1.NetDevicePool) error {
 	glog.V(2).Infof("syncHandler() start")
 	_, err := dn.ndpLister.List(labels.Everything())
 	if err != nil {
 		return err
 	}
 
+	_, err = utils.WriteDeviceConfFile(ndp)
+	if err != nil {
+		return err
+	}
+
+	err = configDevice()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func configDevice() {
-	glog.V(2).Infof("runSystemd(): start")
+func configDevice() error {
+	glog.V(2).Infof("configDevice(): start")
 	exit, err := utils.Chroot("/host")
 	if err != nil {
-		glog.Errorf("rebootNode(): %v", err)
+		return fmt.Errorf("configDevice(): %v", err)
 	}
 	defer exit()
 
 	cmd := exec.Command("systemd-run", "--unit", "network-device-daemon-config",
-		"--description", fmt.Sprintf("network-device-daemon config device"), "/bin/sh", "-c", "systemctl start network-device-configuration.service")
+		"--description", fmt.Sprintf("network-device-daemon config device"), "/bin/sh", "-c", "cd /bindata/scripts && drivers.sh")
 
 	if err := cmd.Run(); err != nil {
-		glog.Errorf("failed to config device: %v", err)
+		return fmt.Errorf("failed to config device: %v", err)
 	}
+	return nil
 }
 
 func rebootNode() {
